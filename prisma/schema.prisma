@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id                     String    @id @default(uuid())
+  creator_id             String
+  title                  String    @db.VarChar(150)
+  description            String    @db.Text
+  category               String    @db.VarChar(50)
+  reward_coins           Int
+  quota                  Int
+  total_reward_coins     BigInt
+  steps                  Json
+  proof_requirements     Json
+  execution_time_minutes Int       @default(60)
+  auto_approval_days     Int       @default(3)
+  status                 String    @default("DRAFT") @db.VarChar(20)
+  version                Int       @default(1)
+  closed_at              DateTime?
+  grace_period_ends_at   DateTime?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+
+  audit_logs             TaskAuditLog[]
+
+  @@index([creator_id])
+  @@index([status])
+  @@map("tasks")
+}
+
+model TaskAuditLog {
+  id         String   @id @default(uuid())
+  task_id    String
+  admin_id   String
+  action     String   @db.VarChar(100)
+  old_value  Json?
+  new_value  Json?
+  created_at DateTime @default(now())
+
+  task       Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@index([task_id])
+  @@index([admin_id])
+  @@map("task_audit_logs")
+}
+

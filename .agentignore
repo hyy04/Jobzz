@@ -1,0 +1,36 @@
+# Sensitive credentials & environment files
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.cert
+*.crt
+
+# Dependencies & Build outputs
+node_modules/
+dist/
+build/
+out/
+.cache/
+
+# Git internals
+.git/
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Coverage & test output
+coverage/
+.nyc_output/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
