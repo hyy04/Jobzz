@@ -95,7 +95,7 @@ export class UpdateFreelanceTaskUseCase {
     }
     if (command.steps !== undefined) {
       updateDetailsParams.steps = command.steps.map((s) =>
-        StepInstruction.create(s.stepNumber, s.instruction, s.targetUrl)
+        StepInstruction.create(s.stepNumber, s.instruction, s.targetUrl, s.imageUrl)
       );
     }
     if (command.proofRequirements !== undefined) {

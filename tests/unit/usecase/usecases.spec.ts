@@ -29,6 +29,10 @@ class InMemoryTaskRepository implements TaskRepositoryPort {
     return this.tasks.get(id) || null;
   }
 
+  public async findAll(): Promise<FreelanceTask[]> {
+    return Array.from(this.tasks.values()).reverse();
+  }
+
   public async update(task: FreelanceTask, expectedVersion: number): Promise<void> {
     const currentDbVersion = this.versions.get(task.getId());
     if (currentDbVersion === undefined) {

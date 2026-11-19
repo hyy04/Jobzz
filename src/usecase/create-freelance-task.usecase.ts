@@ -11,6 +11,7 @@ export interface CreateTaskStepInput {
   stepNumber: number;
   instruction: string;
   targetUrl?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface CreateTaskProofInput {
@@ -58,7 +59,7 @@ export class CreateFreelanceTaskUseCase {
     const quota = Quota.create(command.quota);
 
     const steps = (command.steps || []).map((s) =>
-      StepInstruction.create(s.stepNumber, s.instruction, s.targetUrl)
+      StepInstruction.create(s.stepNumber, s.instruction, s.targetUrl, s.imageUrl)
     );
 
     const proofRequirements = (command.proofRequirements || []).map((p) =>

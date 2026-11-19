@@ -17,6 +17,7 @@
 | Feature slug | Tên feature | Owner | Status | Path |
 | :--- | :--- | :--- | :--- | :--- |
 | `post-job` | Đăng việc / Nhiệm vụ Freelance tự do (Micro-Task) | Admin (@admin) | TASKS_APPROVED | `.sdd/features/post-job/` |
+| `post-job-ui` | Giao diện web quản trị nhiệm vụ Jobzz (Frontend UI) | Admin (@admin) | TASKS_APPROVED | `.sdd/features/post-job-ui/` |
 
 ## Cấu trúc feature
 

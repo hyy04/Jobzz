@@ -1,4 +1,4 @@
-# Dependency-free static release check for the SDD + ADD template.
+﻿# Dependency-free static release check for the SDD + ADD template.
 # It reads files only. It does not run application commands or use network/DB.
 param(
     [Parameter(Mandatory=$false, Position=0)]

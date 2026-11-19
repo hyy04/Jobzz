@@ -2,9 +2,10 @@
   "name": "jobzz",
   "version": "1.0.0",
   "description": "Nền tảng nhiệm vụ freelance tự do Jobzz",
-  "main": "dist/app.js",
+  "main": "dist/src/app.js",
   "scripts": {
     "build": "tsc",
+    "start": "node dist/src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

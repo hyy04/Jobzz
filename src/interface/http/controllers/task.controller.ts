@@ -8,6 +8,7 @@ import { CreateFreelanceTaskUseCase } from '../../../usecase/create-freelance-ta
 import { UpdateFreelanceTaskUseCase } from '../../../usecase/update-freelance-task.usecase';
 import { ChangeTaskStatusUseCase } from '../../../usecase/change-task-status.usecase';
 import { GetFreelanceTaskDetailsUseCase } from '../../../usecase/get-freelance-task-details.usecase';
+import { ListFreelanceTasksUseCase } from '../../../usecase/list-freelance-tasks.usecase';
 import { FreelanceTask } from '../../../domain/entities/freelance-task.entity';
 
 export function formatTaskResponse(task: FreelanceTask) {
@@ -44,8 +45,27 @@ export class TaskController {
     private readonly createUseCase: CreateFreelanceTaskUseCase,
     private readonly updateUseCase: UpdateFreelanceTaskUseCase,
     private readonly changeStatusUseCase: ChangeTaskStatusUseCase,
-    private readonly getDetailsUseCase: GetFreelanceTaskDetailsUseCase
+    private readonly getDetailsUseCase: GetFreelanceTaskDetailsUseCase,
+    private readonly listTasksUseCase?: ListFreelanceTasksUseCase
   ) {}
+
+  public listTasks = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!this.listTasksUseCase) {
+      return reply.status(500).send({
+        error_code: 'USECASE_NOT_INITIALIZED',
+        message: 'ListFreelanceTasksUseCase is not configured',
+      });
+    }
+
+    const tasks = await this.listTasksUseCase.execute({
+      requesterRole: request.user?.role || 'ADMIN',
+    });
+
+    return reply.status(200).send({
+      success: true,
+      data: tasks.map((task) => formatTaskResponse(task)),
+    });
+  };
 
   public createTask = async (request: FastifyRequest, reply: FastifyReply) => {
     const validated = CreateTaskDtoSchema.parse(request.body);
@@ -62,6 +82,7 @@ export class TaskController {
         stepNumber: s.step_number,
         instruction: s.instruction,
         targetUrl: s.target_url,
+        imageUrl: s.image_url,
       })),
       proofRequirements: validated.proof_requirements.map((p) => ({
         id: p.id,
@@ -123,6 +144,7 @@ export class TaskController {
         stepNumber: s.step_number,
         instruction: s.instruction,
         targetUrl: s.target_url,
+        imageUrl: s.image_url,
       })),
       proofRequirements: validated.proof_requirements?.map((p) => ({
         id: p.id,

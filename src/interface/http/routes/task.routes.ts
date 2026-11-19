@@ -3,6 +3,13 @@ import { TaskController } from '../controllers/task.controller';
 import { requireAdminAuth, authenticateUser } from '../guards/admin-auth.guard';
 
 export function registerTaskRoutes(fastify: FastifyInstance, controller: TaskController) {
+  // 0. Lấy danh sách nhiệm vụ (Chỉ ADMIN - REQ-PUI-001)
+  fastify.get(
+    '/api/v1/tasks',
+    { preHandler: [requireAdminAuth] },
+    controller.listTasks
+  );
+
   // 1. Tạo nhiệm vụ mới (Chỉ ADMIN)
   fastify.post(
     '/api/v1/tasks',

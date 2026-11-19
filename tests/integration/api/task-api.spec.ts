@@ -20,6 +20,10 @@ class InMemoryTaskRepository implements TaskRepositoryPort {
     return this.tasks.get(id) || null;
   }
 
+  public async findAll(): Promise<FreelanceTask[]> {
+    return Array.from(this.tasks.values()).reverse();
+  }
+
   public async update(task: FreelanceTask, expectedVersion: number): Promise<void> {
     const currentDbVersion = this.versions.get(task.getId());
     if (currentDbVersion === undefined) {
@@ -421,6 +425,62 @@ describe('Interface Layer: Fastify HTTP API & BDD Scenarios (T006)', () => {
       const json = JSON.parse(workerRes2.payload);
       expect(json.data.task.status).toBe('ACTIVE');
       expect(json.data.progress.remaining_slots).toBe(50);
+    });
+
+    it('REQ-PUI-001 & REQ-PUI-004: Admin có thể lấy danh sách toàn bộ nhiệm vụ (GET /api/v1/tasks)', async () => {
+      // 1. Tạo 2 tasks với dữ liệu chuẩn Zod
+      const createRes1 = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tasks',
+        headers: { 'x-user-id': 'adm-001', 'x-user-role': 'ADMIN' },
+        payload: {
+          title: 'Nhiệm vụ danh sách 1',
+          description: 'Mô tả chi tiết nhiệm vụ danh sách 1 đầy đủ độ dài quy định',
+          category: 'APP_INSTALL',
+          reward_coins: 1000,
+          quota: 10,
+          steps: [{ step_number: 1, instruction: 'Bước 1: Cài đặt ứng dụng trên thiết bị' }],
+          proof_requirements: [{ proof_type: 'TEXT', title: 'Tên tài khoản', description: 'Ghi rõ tên tài khoản đã đăng ký' }],
+        },
+      });
+      expect(createRes1.statusCode).toBe(201);
+
+      const createRes2 = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tasks',
+        headers: { 'x-user-id': 'adm-001', 'x-user-role': 'ADMIN' },
+        payload: {
+          title: 'Nhiệm vụ danh sách 2',
+          description: 'Mô tả chi tiết nhiệm vụ danh sách 2 đầy đủ độ dài quy định',
+          category: 'SURVEY',
+          reward_coins: 2000,
+          quota: 20,
+          steps: [{ step_number: 1, instruction: 'Bước 1: Trả lời khảo sát trực tuyến' }],
+          proof_requirements: [{ proof_type: 'TEXT', title: 'Mã xác nhận', description: 'Nhập mã khảo sát hoàn thành' }],
+        },
+      });
+      expect(createRes2.statusCode).toBe(201);
+
+      // 2. Admin gọi GET /api/v1/tasks -> 200
+      const listRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tasks',
+        headers: { 'x-user-id': 'adm-001', 'x-user-role': 'ADMIN' },
+      });
+
+      expect(listRes.statusCode).toBe(200);
+      const listJson = JSON.parse(listRes.payload);
+      expect(listJson.success).toBe(true);
+      expect(Array.isArray(listJson.data)).toBe(true);
+      expect(listJson.data.length).toBeGreaterThanOrEqual(2);
+
+      // 3. Worker gọi GET /api/v1/tasks -> 403 Forbidden
+      const workerListRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tasks',
+        headers: { 'x-user-id': 'worker-1', 'x-user-role': 'WORKER' },
+      });
+      expect(workerListRes.statusCode).toBe(403);
     });
   });
 });

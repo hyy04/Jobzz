@@ -21,5 +21,10 @@ export interface TaskRepositoryPort {
    * @throws TaskConcurrencyConflictError nếu version trong DB khác expectedVersion
    */
   update(task: FreelanceTask, expectedVersion: number): Promise<void>;
+
+  /**
+   * Lấy toàn bộ danh sách nhiệm vụ (sắp xếp mới nhất trước)
+   */
+  findAll(): Promise<FreelanceTask[]>;
 }
 

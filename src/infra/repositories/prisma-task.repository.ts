@@ -58,9 +58,21 @@ export class PrismaTaskRepository implements TaskRepositoryPort {
       return null;
     }
 
+    return this.mapToEntity(row);
+  }
+
+  public async findAll(): Promise<FreelanceTask[]> {
+    const rows = await this.prisma.task.findMany({
+      orderBy: { created_at: 'desc' },
+    });
+
+    return rows.map((row) => this.mapToEntity(row));
+  }
+
+  private mapToEntity(row: any): FreelanceTask {
     const rawSteps = (row.steps as any[]) || [];
     const steps = rawSteps.map((s) =>
-      StepInstruction.create(s.step_number, s.instruction, s.target_url)
+      StepInstruction.create(s.step_number, s.instruction, s.target_url, s.image_url)
     );
 
     const rawProofs = (row.proof_requirements as any[]) || [];

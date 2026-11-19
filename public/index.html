@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobzz — Quản Trị Nhiệm Vụ Freelance Micro-Tasks</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- Modal Container -->
+  <div id="modal-container"></div>
+
+  <!-- Navbar Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md">
+          J
+        </div>
+        <div>
+          <span class="text-xl font-black tracking-tight text-slate-800">Jobzz</span>
+          <span class="text-xs font-semibold px-2 py-0.5 ml-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60">Quản trị Task</span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- Dev Role Switcher (REQ-PUI-023) -->
+        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+          <span class="text-xs font-semibold text-slate-500">Vai trò kiểm thử:</span>
+          <select id="dev-role-select" class="text-xs font-bold bg-transparent border-none text-slate-800 focus:outline-hidden cursor-pointer">
+            <option value="ADMIN">ADMIN (Quản trị viên)</option>
+            <option value="WORKER">WORKER (Người làm việc)</option>
+          </select>
+        </div>
+
+        <!-- Nút Refresh -->
+        <button id="btn-refresh-all" class="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition shadow-2xs">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>Làm mới</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Section 1: Dashboard Stats Cards (REQ-PUI-001) -->
+    <section>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-stats-grid">
+        <!-- Stats cards rendered dynamically by dashboard-stats.js -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs animate-pulse h-28"></div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs animate-pulse h-28"></div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs animate-pulse h-28"></div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs animate-pulse h-28"></div>
+      </div>
+    </section>
+
+    <!-- Section 2: Form Tạo Nhiệm Vụ Mới -->
+    <section class="max-w-4xl mx-auto w-full">
+      <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-800">Tạo Nhiệm Vụ Mới</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Phát hành công việc freelance vi mô kèm ngân sách Xu tự động</p>
+          </div>
+          <span class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Reactive Engine
+          </span>
+        </div>
+
+        <!-- Banner khôi phục bản nháp (E-1 & REQ-PUI-020) -->
+        <div id="draft-restore-banner" class="hidden p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+          <div class="flex items-center space-x-2.5">
+            <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <span class="text-xs font-medium text-amber-800">Tìm thấy bản nháp chưa lưu trước đó. Bạn có muốn khôi phục?</span>
+          </div>
+          <div class="flex space-x-2">
+            <button id="btn-restore-draft" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition shadow-2xs">Khôi phục</button>
+            <button id="btn-discard-draft" class="px-3 py-1 bg-white border border-amber-300 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-100 transition">Bỏ qua</button>
+          </div>
+        </div>
+
+        <!-- Form chính -->
+        <form id="create-task-form" class="space-y-5">
+          <!-- Tiêu đề -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Tiêu đề nhiệm vụ <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="task-title" required minlength="10" maxlength="150" placeholder="Ví dụ: Cài đặt ứng dụng Jobzz và đánh giá 5 sao (10 - 150 ký tự)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-hidden transition">
+            <p id="error-task-title" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+          </div>
+
+          <!-- Danh mục -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Danh mục công việc <span class="text-rose-500">*</span>
+            </label>
+            <select id="task-category" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-hidden transition bg-white">
+              <option value="APP_INSTALL">Cài đặt ứng dụng (APP_INSTALL)</option>
+              <option value="ACCOUNT_REGISTRATION">Đăng ký tài khoản (ACCOUNT_REGISTRATION)</option>
+              <option value="SOCIAL_INTERACTION">Tương tác mạng xã hội (SOCIAL_INTERACTION)</option>
+              <option value="REVIEW_RATING">Đánh giá & Xếp hạng (REVIEW_RATING)</option>
+              <option value="SURVEY">Khảo sát trực tuyến (SURVEY)</option>
+              <option value="CONTENT_WRITING">Viết nội dung (CONTENT_WRITING)</option>
+              <option value="OTHER">Nhiệm vụ khác (OTHER)</option>
+            </select>
+          </div>
+
+          <!-- Khối tính toán Xu thời gian thực (REQ-PUI-010 & REQ-PUI-011) -->
+          <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-950 uppercase tracking-wider">Cấu hình Ngân sách Xu & Chỉ tiêu</span>
+              <span class="text-xs text-indigo-700 font-semibold">Tự động tính toán (< 5ms)</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                  Chỉ tiêu người cần tuyển (quota) <span class="text-rose-500">*</span>
+                </label>
+                <input type="number" id="task-quota" min="1" max="10000" value="50" required class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-semibold focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-hidden transition bg-white">
+                <p id="error-task-quota" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                  Thù lao cho 1 lượt (reward_coins) <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <input type="number" id="task-reward" min="1" max="500000" value="2000" required class="w-full px-3.5 py-2 pr-12 rounded-xl border border-slate-200 text-sm font-semibold focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-hidden transition bg-white">
+                  <span class="absolute right-3.5 top-2 text-xs font-bold text-amber-500">Xu</span>
+                </div>
+                <p id="error-task-reward" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+              </div>
+            </div>
+
+            <!-- Tổng ngân sách Xu hiển thị tự động -->
+            <div class="pt-2 border-t border-indigo-100/80 flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-600">Tổng ngân sách chiến dịch:</span>
+              <div class="text-right">
+                <span id="calculated-total-coins" class="text-lg font-black text-indigo-700">100,000</span>
+                <span class="text-xs font-bold text-amber-500 ml-1">Xu</span>
+              </div>
+            </div>
+            <p id="error-task-total" class="hidden text-xs text-rose-600 font-bold bg-rose-50 p-2 rounded-lg border border-rose-200"></p>
+          </div>
+
+          <!-- Mô tả chi tiết -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Mô tả chi tiết nhiệm vụ <span class="text-rose-500">*</span>
+            </label>
+            <textarea id="task-description" rows="3" required minlength="20" placeholder="Mô tả tóm tắt bối cảnh và yêu cầu tổng quan (tối thiểu 20 ký tự)..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-hidden transition"></textarea>
+            <p id="error-task-description" class="hidden text-xs text-rose-500 mt-1 font-medium"></p>
+          </div>
+
+          <!-- Dynamic Steps Builder (REQ-PUI-012 & REQ-PUI-013 HTTPS URL) -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Các bước thực hiện (Steps) <span class="text-rose-500">*</span>
+              </label>
+              <button type="button" id="btn-add-step" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1">
+                <span>+ Thêm bước</span>
+              </button>
+            </div>
+            <div id="steps-container" class="space-y-2.5">
+              <!-- Rendered dynamically by task-form.js -->
+            </div>
+          </div>
+
+          <!-- Dynamic Proof Requirements Builder (REQ-PUI-014 & REQ-PUI-015) -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Yêu cầu bằng chứng (Proofs) <span class="text-rose-500">*</span>
+              </label>
+              <button type="button" id="btn-add-proof" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1">
+                <span>+ Thêm bằng chứng</span>
+              </button>
+            </div>
+            <div id="proofs-container" class="space-y-2.5">
+              <!-- Rendered dynamically by task-form.js -->
+            </div>
+          </div>
+
+          <!-- Nút hành động Submit -->
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+            <button type="button" id="btn-save-draft" class="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+              Lưu nháp (Draft)
+            </button>
+            <button type="submit" id="btn-submit-task" class="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md flex items-center space-x-2">
+              <span>Xuất bản ngay (Active)</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Section 3: Bảng Quản Trị Nhiệm Vụ (Task Table - REQ-PUI-004..009) -->
+    <section class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">Danh Sách Nhiệm Vụ</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Theo dõi trạng thái, phiên bản OCC và điều phối vòng đời công việc</p>
+        </div>
+
+        <!-- Ô tìm kiếm -->
+        <div class="relative w-full sm:w-64">
+          <input type="text" id="task-search-input" placeholder="Tìm theo tiêu đề hoặc mã..." class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-hidden transition">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+      </div>
+
+      <!-- Tab lọc trạng thái (REQ-PUI-005) -->
+      <div class="flex flex-wrap gap-2" id="task-status-filter-tabs">
+        <button data-status="ALL" class="status-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition shadow-2xs">Tất cả</button>
+        <button data-status="ACTIVE" class="status-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Đang chạy</button>
+        <button data-status="PAUSED" class="status-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Tạm dừng</button>
+        <button data-status="DRAFT" class="status-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Bản nháp</button>
+        <button data-status="COMPLETED" class="status-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Hoàn thành</button>
+        <button data-status="CLOSED" class="status-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Đã đóng</button>
+      </div>
+
+      <!-- Bảng dữ liệu -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-bold border-y border-slate-100">
+            <tr>
+              <th class="py-3 px-3">Mã</th>
+              <th class="py-3 px-3">Tiêu đề & Danh mục</th>
+              <th class="py-3 px-3">Chỉ tiêu (Quota)</th>
+              <th class="py-3 px-3">Thù lao</th>
+              <th class="py-3 px-3">Tổng ngân sách</th>
+              <th class="py-3 px-3">Trạng thái</th>
+              <th class="py-3 px-3">OCC</th>
+              <th class="py-3 px-3 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="task-table-body" class="divide-y divide-slate-100">
+            <!-- Rendered dynamically by task-table.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+    <p>Nền tảng Jobzz Micro-Tasks &copy; 2026. Tuân thủ nghiêm ngặt Clean Architecture & Quy chuẩn SDD.</p>
+  </footer>
+
+  <!-- Main JavaScript App Entry -->
+  <script type="module" src="/public/js/app.js"></script>
+</body>
+</html>
+

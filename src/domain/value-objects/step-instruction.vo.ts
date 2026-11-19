@@ -18,10 +18,16 @@ export class StepInstruction {
   private constructor(
     private readonly stepNumber: number,
     private readonly instruction: string,
-    private readonly targetUrl: SecureUrl | null
+    private readonly targetUrl: SecureUrl | null,
+    private readonly imageUrl: string | null = null
   ) {}
 
-  public static create(stepNumber: number, instruction: string, rawUrl?: string | null): StepInstruction {
+  public static create(
+    stepNumber: number,
+    instruction: string,
+    rawUrl?: string | null,
+    rawImageUrl?: string | null
+  ): StepInstruction {
     if (!Number.isSafeInteger(stepNumber) || stepNumber < 1) {
       throw new InvalidStepInstructionError('Thứ tự bước phải là số nguyên dương từ 1 trở lên.');
     }
@@ -36,7 +42,12 @@ export class StepInstruction {
       secureUrl = SecureUrl.create(rawUrl);
     }
 
-    return new StepInstruction(stepNumber, trimmedInstruction, secureUrl);
+    let imageUrl: string | null = null;
+    if (rawImageUrl && rawImageUrl.trim().length > 0) {
+      imageUrl = rawImageUrl.trim();
+    }
+
+    return new StepInstruction(stepNumber, trimmedInstruction, secureUrl, imageUrl);
   }
 
   public getStepNumber(): number {
@@ -51,11 +62,16 @@ export class StepInstruction {
     return this.targetUrl ? this.targetUrl.getValue() : null;
   }
 
+  public getImageUrl(): string | null {
+    return this.imageUrl;
+  }
+
   public toJSON() {
     return {
       step_number: this.stepNumber,
       instruction: this.instruction,
       target_url: this.getTargetUrl(),
+      image_url: this.getImageUrl(),
     };
   }
 }

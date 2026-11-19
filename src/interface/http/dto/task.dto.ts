@@ -14,6 +14,7 @@ export const StepInstructionDtoSchema = z.object({
   step_number: z.number().int().min(1, 'Thứ tự bước phải từ 1 trở lên.'),
   instruction: z.string().min(10, 'Hướng dẫn phải từ 10 ký tự.').max(1000, 'Hướng dẫn tối đa 1,000 ký tự.'),
   target_url: z.string().url('URL không hợp lệ.').optional().nullable(),
+  image_url: z.string().optional().nullable(),
 });
 
 export const ProofRequirementDtoSchema = z.object({
