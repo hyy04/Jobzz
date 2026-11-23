@@ -15,6 +15,7 @@ declare module 'fastify' {
  */
 export async function authenticateUser(request: FastifyRequest, _reply: FastifyReply) {
   const userId =
+    (request.headers['x-worker-id'] as string) ||
     (request.headers['x-user-id'] as string) ||
     (request.headers['x-admin-id'] as string) ||
     'anonymous-user';

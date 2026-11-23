@@ -18,6 +18,8 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `post-job` | Đăng việc / Nhiệm vụ Freelance tự do (Micro-Task) | Admin (@admin) | TASKS_APPROVED | `.sdd/features/post-job/` |
 | `post-job-ui` | Giao diện web quản trị nhiệm vụ Jobzz (Frontend UI) | Admin (@admin) | TASKS_APPROVED | `.sdd/features/post-job-ui/` |
+| `browse-and-claim-task` | Xem danh sách nhiệm vụ và Nhận việc cho Worker | Worker Team (@worker-team) | IMPLEMENTED | `.sdd/features/browse-and-claim-task/` |
+| `submit-task-proof` | Nộp bằng chứng nhiệm vụ (Submit Proof) cho Worker | Worker Team (@worker-team) | IMPLEMENTED | `.sdd/features/submit-task-proof/` |
 
 ## Cấu trúc feature
 

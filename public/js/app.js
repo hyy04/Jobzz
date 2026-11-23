@@ -1,14 +1,18 @@
-import { initNavbar, onRoleChange } from './components/navbar.js';
+import { initNavbar, onRoleChange, getCurrentRole } from './components/navbar.js';
 import { initTaskForm } from './components/task-form.js';
 import { initTaskTable, updateTaskTable } from './components/task-table.js';
 import { renderDashboardStats } from './components/dashboard-stats.js';
+import { WorkerMarketplace } from './components/worker-marketplace.js';
 import { ApiClient } from './api.js';
 import { showToast } from './components/toast-modal.js';
 
+let marketplace = null;
+let currentTab = 'admin';
+
 /**
- * Điều phối ứng dụng Single Page Application Quản trị Jobzz
+ * Tải dữ liệu trang Quản trị Admin
  */
-async function loadData() {
+async function loadAdminData() {
   try {
     const res = await ApiClient.getTasks();
     const tasks = res.data || [];
@@ -20,7 +24,7 @@ async function loadData() {
     updateTaskTable(tasks);
   } catch (err) {
     if (err.status === 403) {
-      showToast('Bạn đang ở vai trò WORKER. Vui lòng chuyển sang ADMIN trên Navbar để quản trị task!', 'warning', 5000);
+      showToast('Bạn đang ở vai trò WORKER. Vui lòng chuyển sang ADMIN trên Navbar để quản trị task!', 'warning', 4000);
       renderDashboardStats([]);
       updateTaskTable([]);
     } else {
@@ -29,34 +33,102 @@ async function loadData() {
   }
 }
 
+/**
+ * Chuyển đổi giữa Tab Người làm (Worker) và Tab Quản trị (Admin)
+ * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-018
+ */
+export function switchTab(tab) {
+  currentTab = tab;
+  const workerView = document.getElementById('view-worker');
+  const adminView = document.getElementById('view-admin');
+  const tabWorkerBtn = document.getElementById('nav-tab-worker');
+  const tabAdminBtn = document.getElementById('nav-tab-admin');
+
+  if (tab === 'worker') {
+    window.location.hash = '#worker';
+    workerView?.classList.remove('hidden');
+    adminView?.classList.add('hidden');
+
+    tabWorkerBtn?.classList.add('bg-white', 'text-brand-600', 'shadow-2xs');
+    tabWorkerBtn?.classList.remove('text-slate-600');
+
+    tabAdminBtn?.classList.remove('bg-white', 'text-brand-600', 'shadow-2xs');
+    tabAdminBtn?.classList.add('text-slate-600');
+
+    if (marketplace) marketplace.loadTasks();
+  } else {
+    window.location.hash = '#admin';
+    workerView?.classList.add('hidden');
+    adminView?.classList.remove('hidden');
+
+    tabAdminBtn?.classList.add('bg-white', 'text-brand-600', 'shadow-2xs');
+    tabAdminBtn?.classList.remove('text-slate-600');
+
+    tabWorkerBtn?.classList.remove('bg-white', 'text-brand-600', 'shadow-2xs');
+    tabWorkerBtn?.classList.add('text-slate-600');
+
+    loadAdminData();
+  }
+}
+
 // Khởi chạy khi DOM sẵn sàng
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Khởi tạo Navbar & Dev Role Switcher
   initNavbar();
-  onRoleChange(async () => {
-    showToast('Đã đổi vai trò kiểm thử. Đang tải lại dữ liệu...', 'info', 2000);
-    await loadData();
+
+  // 2. Khởi tạo Worker Marketplace
+  marketplace = new WorkerMarketplace('worker-marketplace-container');
+  marketplace.init();
+
+  // 3. Tab navigation listeners
+  document.getElementById('nav-tab-worker')?.addEventListener('click', () => switchTab('worker'));
+  document.getElementById('nav-tab-admin')?.addEventListener('click', () => switchTab('admin'));
+
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash;
+    if (hash === '#worker') switchTab('worker');
+    else if (hash === '#admin') switchTab('admin');
   });
 
-  // 2. Khởi tạo Task Table
+  onRoleChange(async (role) => {
+    showToast(`Đã đổi vai trò kiểm thử sang [${role}].`, 'info', 2000);
+    if (role === 'WORKER') {
+      switchTab('worker');
+    } else if (role === 'ADMIN') {
+      switchTab('admin');
+    } else {
+      if (currentTab === 'worker') marketplace.loadTasks();
+      else loadAdminData();
+    }
+  });
+
+  // 4. Khởi tạo Task Table cho Admin
   initTaskTable(async () => {
-    await loadData();
+    await loadAdminData();
   });
 
-  // 3. Khởi tạo Task Form
+  // 5. Khởi tạo Task Form cho Admin
   initTaskForm(async (_createdTask) => {
-    // Khi tạo task thành công: tải lại dữ liệu bảng & cuộn xuống
-    await loadData();
+    await loadAdminData();
     document.getElementById('task-search-input')?.scrollIntoView({ behavior: 'smooth' });
   });
 
-  // 5. Nút làm mới toàn trang
+  // 6. Nút làm mới toàn trang
   document.getElementById('btn-refresh-all')?.addEventListener('click', async () => {
     showToast('Đang làm mới dữ liệu...', 'info', 1500);
-    await loadData();
+    if (currentTab === 'worker') {
+      await marketplace.loadTasks();
+    } else {
+      await loadAdminData();
+    }
   });
 
-  // 6. Nạp dữ liệu ban đầu
-  await loadData();
+  // 7. Xác định tab ban đầu theo URL hash hoặc vai trò
+  const initialHash = window.location.hash;
+  const initialRole = getCurrentRole();
+  if (initialHash === '#worker' || initialRole === 'WORKER') {
+    switchTab('worker');
+  } else {
+    switchTab('admin');
+  }
 });
-

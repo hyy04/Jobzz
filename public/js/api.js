@@ -81,4 +81,85 @@ export class ApiClient {
       }),
     });
   }
+
+  /**
+   * Lấy danh sách nhiệm vụ công khai khả dụng cho Người làm
+   * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-001..005
+   */
+  static async getPublicTasks(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.category) query.set('category', params.category);
+    if (params.sort_by) query.set('sort_by', params.sort_by);
+
+    const queryString = query.toString();
+    const endpoint = queryString ? `/api/v1/public/tasks?${queryString}` : '/api/v1/public/tasks';
+    return this.request(endpoint, { method: 'GET' });
+  }
+
+  /**
+   * Xem chi tiết nhiệm vụ công khai kèm ảnh minh họa và yêu cầu bằng chứng
+   * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-006..008
+   */
+  static async getPublicTaskDetails(id) {
+    return this.request(`/api/v1/public/tasks/${id}`, { method: 'GET' });
+  }
+
+  /**
+   * Nhận việc giữ slot (Claim Slot)
+   * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-009..014
+   */
+  static async claimTaskSlot(id) {
+    return this.request(`/api/v1/tasks/${id}/claim`, { method: 'POST' });
+  }
+
+  /**
+   * Hủy nhận việc để hoàn trả slot
+   * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-015..016
+   */
+  static async cancelTaskClaim(id) {
+    return this.request(`/api/v1/tasks/${id}/claims/cancel`, { method: 'POST' });
+  }
+
+  /**
+   * Kiểm tra thông tin lượt giữ slot hiện tại của Worker
+   */
+  static async getMyClaim(id) {
+    return this.request(`/api/v1/tasks/${id}/my-claim`, { method: 'GET' });
+  }
+
+  /**
+   * Tải tệp ảnh bằng chứng nhiệm vụ (PNG, JPEG, WebP <= 5MB)
+   * @ears .sdd/features/submit-task-proof/SPEC.md#REQ-STP-001..005
+   */
+  static async uploadProofImage(fileData, mimeType, filename) {
+    return this.request('/api/v1/uploads/proof-image', {
+      method: 'POST',
+      body: JSON.stringify({
+        file: fileData,
+        mime_type: mimeType,
+        filename,
+      }),
+    });
+  }
+
+  /**
+   * Nộp bằng chứng hoàn thành nhiệm vụ
+   * @ears .sdd/features/submit-task-proof/SPEC.md#REQ-STP-006..014
+   */
+  static async submitTaskProof(claimId, proofs) {
+    return this.request(`/api/v1/claims/${claimId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ proofs }),
+    });
+  }
+
+  /**
+   * Lấy thông tin chi tiết lượt claim và bằng chứng đã nộp
+   * @ears .sdd/features/submit-task-proof/SPEC.md#REQ-STP-015
+   */
+  static async getClaimDetails(claimId) {
+    return this.request(`/api/v1/claims/${claimId}`, { method: 'GET' });
+  }
 }

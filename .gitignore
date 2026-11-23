@@ -37,6 +37,8 @@ tmp/
 *.pid
 *.seed
 *.pid.lock
+public/uploads/*
+!public/uploads/.gitkeep
 
 # OS Files
 .DS_Store

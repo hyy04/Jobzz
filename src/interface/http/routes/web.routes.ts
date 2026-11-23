@@ -11,6 +11,7 @@ const MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
 };
@@ -54,6 +55,13 @@ export function registerWebRoutes(fastify: FastifyInstance, publicDirOverride?: 
   fastify.get('/public/*', async (request: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
     const subPath = request.params['*'] || '';
     const filePath = path.join(publicDir, subPath);
+    return serveFile(filePath, reply);
+  });
+
+  // 3. Tuyến đường phục vụ tệp upload (/uploads/*)
+  fastify.get('/uploads/*', async (request: FastifyRequest<{ Params: { '*': string } }>, reply: FastifyReply) => {
+    const subPath = request.params['*'] || '';
+    const filePath = path.join(publicDir, 'uploads', subPath);
     return serveFile(filePath, reply);
   });
 }

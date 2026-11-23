@@ -42,17 +42,28 @@
         </div>
         <div>
           <span class="text-xl font-black tracking-tight text-slate-800">Jobzz</span>
-          <span class="text-xs font-semibold px-2 py-0.5 ml-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60">Quản trị Task</span>
+          <span class="text-xs font-semibold px-2 py-0.5 ml-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60">Bounty Hub</span>
         </div>
+
+        <!-- Navigation Tabs (Worker vs Admin) -->
+        <nav class="hidden sm:flex items-center space-x-1 ml-4 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <button id="nav-tab-worker" class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition text-slate-600 hover:text-slate-900">
+            💼 Tìm Việc Làm
+          </button>
+          <button id="nav-tab-admin" class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition bg-white text-brand-600 shadow-2xs">
+            ⚙️ Quản Trị Task
+          </button>
+        </nav>
       </div>
 
       <div class="flex items-center space-x-4">
         <!-- Dev Role Switcher (REQ-PUI-023) -->
         <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-          <span class="text-xs font-semibold text-slate-500">Vai trò kiểm thử:</span>
+          <span class="text-xs font-semibold text-slate-500">Vai trò:</span>
           <select id="dev-role-select" class="text-xs font-bold bg-transparent border-none text-slate-800 focus:outline-hidden cursor-pointer">
             <option value="ADMIN">ADMIN (Quản trị viên)</option>
             <option value="WORKER">WORKER (Người làm việc)</option>
+            <option value="GUEST">GUEST (Khách vãng lai)</option>
           </select>
         </div>
 
@@ -68,9 +79,16 @@
   <!-- Main Content Area -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-    <!-- Section 1: Dashboard Stats Cards (REQ-PUI-001) -->
-    <section>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-stats-grid">
+    <!-- Worker View (REQ-BCT-018) -->
+    <div id="view-worker" class="hidden space-y-8">
+      <div id="worker-marketplace-container"></div>
+    </div>
+
+    <!-- Admin View (REQ-PUI-001) -->
+    <div id="view-admin" class="space-y-8">
+      <!-- Section 1: Dashboard Stats Cards (REQ-PUI-001) -->
+      <section>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-stats-grid">
         <!-- Stats cards rendered dynamically by dashboard-stats.js -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs animate-pulse h-28"></div>
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs animate-pulse h-28"></div>
@@ -268,6 +286,7 @@
         </table>
       </div>
     </section>
+  </div> <!-- /#view-admin -->
 
   </main>
 

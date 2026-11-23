@@ -28,6 +28,7 @@ model Task {
   updated_at             DateTime  @updatedAt
 
   audit_logs             TaskAuditLog[]
+  claims                 TaskClaim[]
 
   @@index([creator_id])
   @@index([status])
@@ -48,5 +49,26 @@ model TaskAuditLog {
   @@index([task_id])
   @@index([admin_id])
   @@map("task_audit_logs")
+}
+
+model TaskClaim {
+  id           String    @id @default(uuid())
+  task_id      String
+  worker_id    String
+  status       String    @default("IN_PROGRESS") @db.VarChar(20)
+  claimed_at   DateTime  @default(now())
+  expires_at   DateTime
+  submitted_at     DateTime?
+  submitted_proofs Json?
+  completed_at     DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  task         Task      @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@index([task_id, status])
+  @@index([worker_id, task_id])
+  @@index([expires_at])
+  @@map("task_claims")
 }
 
