@@ -61,6 +61,9 @@ model TaskClaim {
   submitted_at     DateTime?
   submitted_proofs Json?
   completed_at     DateTime?
+  reviewer_id      String?   @db.VarChar(100)
+  reviewed_at      DateTime?
+  rejection_reason String?   @db.Text
   created_at   DateTime  @default(now())
   updated_at   DateTime  @updatedAt
 
@@ -69,6 +72,38 @@ model TaskClaim {
   @@index([task_id, status])
   @@index([worker_id, task_id])
   @@index([expires_at])
+  @@index([status, submitted_at])
   @@map("task_claims")
+}
+
+model WorkerWallet {
+  id         String   @id @default(uuid())
+  worker_id  String   @unique @db.VarChar(100)
+  balance    Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  transactions WalletTransaction[]
+
+  @@map("worker_wallets")
+}
+
+model WalletTransaction {
+  id            String   @id @default(uuid())
+  wallet_id     String
+  worker_id     String   @db.VarChar(100)
+  type          String   @db.VarChar(30)
+  amount        Int
+  balance_after Int
+  reference_id  String?  @db.VarChar(100)
+  description   String   @db.VarChar(255)
+  created_at    DateTime @default(now())
+
+  wallet        WorkerWallet @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+
+  @@index([worker_id])
+  @@index([wallet_id])
+  @@index([reference_id])
+  @@map("wallet_transactions")
 }
 

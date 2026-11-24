@@ -1,10 +1,16 @@
 import { buildApp } from './app';
+import { InMemoryTaskClaimRepository } from './infra/repositories/in-memory-task-claim.repository';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function startServer() {
-  const app = buildApp();
+  const usePrisma = Boolean(process.env.DATABASE_URL);
+  // Khi chạy local in-memory, khởi tạo sẵn bài nộp mẫu để Admin có thể thử nghiệm tính năng Duyệt bài ngay lập tức
+  const claimRepo = usePrisma ? undefined : new InMemoryTaskClaimRepository(true);
+  const app = buildApp({
+    taskClaimRepository: claimRepo,
+  });
   const dbMode = process.env.DATABASE_URL ? 'PostgreSQL (Prisma)' : 'In-Memory (Demo Mode with Sample Tasks)';
 
   try {

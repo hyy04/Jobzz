@@ -142,3 +142,48 @@ export class InvalidProofValueError extends DomainError {
     super(message);
   }
 }
+
+/**
+ * Các lỗi miền nghiệp vụ cho tính năng review-task-submission (Admin Review)
+ * @ears .sdd/features/review-task-submission/SPEC.md#6-ma-tran-xu-ly-loi-rfc-7807-error-matrix
+ */
+export class ClaimAlreadyReviewedError extends DomainError {
+  readonly errorCode = 'CLAIM_ALREADY_REVIEWED';
+  readonly statusCode = 409;
+  constructor(message = 'Bài nộp đã được phê duyệt hoặc từ chối trước đó, không thể xét duyệt lại.') {
+    super(message);
+  }
+}
+
+export class ClaimNotInSubmittedStatusError extends DomainError {
+  readonly errorCode = 'CLAIM_NOT_IN_SUBMITTED_STATUS';
+  readonly statusCode = 409;
+  constructor(message = 'Chỉ có thể xét duyệt bài nộp đang ở trạng thái SUBMITTED.') {
+    super(message);
+  }
+}
+
+export class SubmissionRejectionReasonInvalidError extends DomainError {
+  readonly errorCode = 'SUBMISSION_REJECTION_REASON_INVALID';
+  readonly statusCode = 400;
+  constructor(message = 'Lý do từ chối phải có độ dài từ 10 đến 500 ký tự hợp lệ.') {
+    super(message);
+  }
+}
+
+export class TaskQuotaExceededError extends DomainError {
+  readonly errorCode = 'TASK_QUOTA_EXCEEDED';
+  readonly statusCode = 409;
+  constructor(message = 'Nhiệm vụ đã đạt đủ số lượng bài duyệt thành công (Quota), không thể duyệt thêm bài nộp.') {
+    super(message);
+  }
+}
+
+export class SubmissionNotFoundError extends DomainError {
+  readonly errorCode = 'SUBMISSION_NOT_FOUND';
+  readonly statusCode = 404;
+  constructor(message = 'Không tìm thấy bài nộp hoặc lượt nhận việc yêu cầu.') {
+    super(message);
+  }
+}
+

@@ -15,10 +15,11 @@ describe('T005-STP Integration: Submit Task Proof API Endpoints', () => {
   let taskRepo: InMemoryTaskRepository;
   let claimRepo: InMemoryTaskClaimRepository;
 
-  const baseTime = new Date('2026-11-23T10:00:00.000Z');
+  let baseTime: Date;
   let testTask: FreelanceTask;
 
   beforeEach(async () => {
+    baseTime = new Date();
     taskRepo = new InMemoryTaskRepository(false);
     claimRepo = new InMemoryTaskClaimRepository();
 

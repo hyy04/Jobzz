@@ -1,4 +1,8 @@
-import { TaskClaimRepositoryPort } from '../../usecase/ports/task-claim-repository.port';
+import {
+  TaskClaimRepositoryPort,
+  SubmittedClaimsFilter,
+  SubmittedClaimsResult,
+} from '../../usecase/ports/task-claim-repository.port';
 import { TaskClaim } from '../../domain/entities/task-claim.entity';
 import { FreelanceTask } from '../../domain/entities/freelance-task.entity';
 import { SubmittedProofItem } from '../../domain/value-objects/submitted-proof.vo';
@@ -8,6 +12,8 @@ import {
   ForbiddenNotClaimOwnerError,
   ClaimNotInProgressError,
   ClaimExpiredError,
+  SubmissionNotFoundError,
+  TaskQuotaExceededError,
 } from '../../shared/errors/claim-errors';
 import { PrismaClient } from '@prisma/client';
 import { getPrismaClient } from '../database/prisma-client';
@@ -217,6 +223,127 @@ export class PrismaTaskClaimRepository implements TaskClaimRepositoryPort {
     });
   }
 
+  /**
+   * Lấy danh sách bài nộp đang ở trạng thái SUBMITTED có phân trang và lọc theo task (FIFO)
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-001..003
+   */
+  public async findSubmittedClaims(filter: SubmittedClaimsFilter): Promise<SubmittedClaimsResult> {
+    const where: any = { status: 'SUBMITTED' };
+    if (filter.taskId) {
+      where.task_id = filter.taskId;
+    }
+
+    const total = await (this.prisma as any).taskClaim.count({ where });
+    const page = Math.max(1, filter.page || 1);
+    const limit = Math.max(1, filter.limit || 10);
+    const skip = (page - 1) * limit;
+
+    const list = await (this.prisma as any).taskClaim.findMany({
+      where,
+      orderBy: { submitted_at: 'asc' }, // FIFO
+      skip,
+      take: limit,
+    });
+
+    return {
+      claims: list.map((item: any) => this.mapToDomain(item)),
+      total,
+    };
+  }
+
+  /**
+   * Xem chi tiết bài nộp theo claimId
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-004..005
+   */
+  public async findSubmissionDetails(claimId: string): Promise<TaskClaim | null> {
+    return this.findById(claimId);
+  }
+
+  /**
+   * Phê duyệt bài nộp một cách nguyên tử có khóa bảo vệ (Atomic Approve OCC)
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-007..011, REQ-RTS-018
+   */
+  public async approveAtomic(
+    claimId: string,
+    reviewerId: string,
+    now: Date,
+    taskQuota?: number
+  ): Promise<TaskClaim> {
+    return (this.prisma as any).$transaction(async (tx: any) => {
+      const raw = await tx.taskClaim.findUnique({
+        where: { id: claimId },
+      });
+      if (!raw) {
+        throw new SubmissionNotFoundError();
+      }
+
+      if (typeof taskQuota === 'number') {
+        const approvedCount = await tx.taskClaim.count({
+          where: {
+            task_id: raw.task_id,
+            status: 'APPROVED',
+          },
+        });
+        if (approvedCount >= taskQuota) {
+          throw new TaskQuotaExceededError();
+        }
+      }
+
+      const claim = this.mapToDomain(raw);
+      claim.approve(reviewerId, now);
+
+      const updatedRaw = await tx.taskClaim.update({
+        where: { id: claimId },
+        data: {
+          status: claim.status.getValue(),
+          reviewer_id: claim.reviewerId,
+          reviewed_at: claim.reviewedAt,
+          completed_at: claim.completedAt,
+          updated_at: claim.updatedAt,
+        },
+      });
+
+      return this.mapToDomain(updatedRaw);
+    });
+  }
+
+  /**
+   * Từ chối bài nộp một cách nguyên tử có khóa bảo vệ (Atomic Reject OCC)
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-012..016, REQ-RTS-018
+   */
+  public async rejectAtomic(
+    claimId: string,
+    reviewerId: string,
+    rejectionReason: string,
+    now: Date
+  ): Promise<TaskClaim> {
+    return (this.prisma as any).$transaction(async (tx: any) => {
+      const raw = await tx.taskClaim.findUnique({
+        where: { id: claimId },
+      });
+      if (!raw) {
+        throw new SubmissionNotFoundError();
+      }
+
+      const claim = this.mapToDomain(raw);
+      claim.reject(reviewerId, rejectionReason, now);
+
+      const updatedRaw = await tx.taskClaim.update({
+        where: { id: claimId },
+        data: {
+          status: claim.status.getValue(),
+          reviewer_id: claim.reviewerId,
+          reviewed_at: claim.reviewedAt,
+          completed_at: claim.completedAt,
+          rejection_reason: claim.rejectionReason,
+          updated_at: claim.updatedAt,
+        },
+      });
+
+      return this.mapToDomain(updatedRaw);
+    });
+  }
+
   private mapToDomain(raw: any): TaskClaim {
     const rawProofs = raw.submitted_proofs || [];
     const submittedProofs = Array.isArray(rawProofs)
@@ -238,6 +365,9 @@ export class PrismaTaskClaimRepository implements TaskClaimRepositoryPort {
       expiresAt: raw.expires_at,
       submittedAt: raw.submitted_at,
       completedAt: raw.completed_at,
+      reviewerId: raw.reviewer_id,
+      reviewedAt: raw.reviewed_at,
+      rejectionReason: raw.rejection_reason,
       submittedProofs,
       createdAt: raw.created_at,
       updatedAt: raw.updated_at,

@@ -5,11 +5,13 @@ import { PublicTaskController } from './interface/http/controllers/public-task.c
 import { TaskClaimController } from './interface/http/controllers/task-claim.controller';
 import { ProofUploadController } from './interface/http/controllers/proof-upload.controller';
 import { TaskSubmissionController } from './interface/http/controllers/task-submission.controller';
+import { AdminSubmissionController } from './interface/http/controllers/admin-submission.controller';
 import { registerTaskRoutes } from './interface/http/routes/task.routes';
 import { registerPublicTaskRoutes } from './interface/http/routes/public-task.routes';
 import { registerClaimRoutes } from './interface/http/routes/claim.routes';
 import { registerUploadRoutes } from './interface/http/routes/upload.routes';
 import { registerSubmissionRoutes } from './interface/http/routes/submission.routes';
+import { registerAdminSubmissionRoutes } from './interface/http/routes/admin-submission.routes';
 import { registerWebRoutes } from './interface/http/routes/web.routes';
 import { CreateFreelanceTaskUseCase } from './usecase/create-freelance-task.usecase';
 import { UpdateFreelanceTaskUseCase } from './usecase/update-freelance-task.usecase';
@@ -23,17 +25,24 @@ import { CancelTaskClaimUseCase } from './usecase/cancel-task-claim.usecase';
 import { UploadProofImageUseCase } from './usecase/upload-proof-image.usecase';
 import { SubmitTaskProofUseCase } from './usecase/submit-task-proof.usecase';
 import { GetClaimDetailsUseCase } from './usecase/get-claim-details.usecase';
+import { ListSubmittedClaimsUseCase } from './usecase/list-submitted-claims.usecase';
+import { GetSubmissionDetailsUseCase } from './usecase/get-submission-details.usecase';
+import { ApproveTaskSubmissionUseCase } from './usecase/approve-task-submission.usecase';
+import { RejectTaskSubmissionUseCase } from './usecase/reject-task-submission.usecase';
 import { TaskRepositoryPort } from './usecase/ports/task-repository.port';
 import { TaskProgressPort } from './usecase/ports/task-progress.port';
 import { TaskClaimRepositoryPort } from './usecase/ports/task-claim-repository.port';
 import { TaskAuditLogPort } from './usecase/ports/task-audit-log.port';
 import { StoragePort } from './usecase/ports/storage.port';
+import { WalletPort } from './usecase/ports/wallet.port';
 import { PrismaTaskRepository } from './infra/repositories/prisma-task.repository';
 import { PrismaTaskClaimRepository } from './infra/repositories/prisma-task-claim.repository';
 import { PrismaTaskAuditLogRepository } from './infra/repositories/prisma-audit-log.repository';
+import { PrismaWalletRepository } from './infra/repositories/prisma-wallet.repository';
 import { InMemoryTaskRepository } from './infra/repositories/in-memory-task.repository';
 import { InMemoryTaskClaimRepository } from './infra/repositories/in-memory-task-claim.repository';
 import { InMemoryTaskAuditLogRepository } from './infra/repositories/in-memory-audit-log.repository';
+import { InMemoryWalletRepository } from './infra/repositories/in-memory-wallet.repository';
 import { LocalStorageAdapter } from './infra/storage/local-storage.adapter';
 import { LiveTaskProgressAdapter } from './infra/adapters/live-task-progress.adapter';
 
@@ -43,6 +52,7 @@ export interface BuildAppOptions {
   taskProgressPort?: TaskProgressPort;
   taskAuditLogPort?: TaskAuditLogPort;
   storagePort?: StoragePort;
+  walletPort?: WalletPort;
   publicDir?: string;
 }
 
@@ -60,6 +70,25 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     { parseAs: 'buffer' },
     (_req, body, done) => {
       done(null, body);
+    }
+  );
+
+  // Hỗ trợ Content-Type application/json với body rỗng (chống FST_ERR_CTP_EMPTY_JSON_BODY)
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_req, body: string, done) => {
+      if (!body || body.trim() === '') {
+        done(null, {});
+        return;
+      }
+      try {
+        const json = JSON.parse(body);
+        done(null, json);
+      } catch (err: any) {
+        err.statusCode = 400;
+        done(err, undefined);
+      }
     }
   );
 
@@ -89,6 +118,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     (usePrisma ? new PrismaTaskAuditLogRepository() : new InMemoryTaskAuditLogRepository());
   const storagePort =
     options.storagePort || new LocalStorageAdapter();
+  const walletPort =
+    options.walletPort ||
+    (usePrisma ? new PrismaWalletRepository() : new InMemoryWalletRepository());
 
   const createUseCase = new CreateFreelanceTaskUseCase(taskRepo, auditLogPort);
   const updateUseCase = new UpdateFreelanceTaskUseCase(taskRepo, progressPort, auditLogPort);
@@ -107,6 +139,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const submitUseCase = new SubmitTaskProofUseCase(claimRepo, taskRepo);
   const getClaimDetailsUseCase = new GetClaimDetailsUseCase(claimRepo, taskRepo);
 
+  // Use cases cho review-task-submission
+  const listSubmittedClaimsUseCase = new ListSubmittedClaimsUseCase(claimRepo, taskRepo);
+  const getSubmissionDetailsUseCase = new GetSubmissionDetailsUseCase(claimRepo, taskRepo);
+  const approveTaskSubmissionUseCase = new ApproveTaskSubmissionUseCase(claimRepo, taskRepo, walletPort);
+  const rejectTaskSubmissionUseCase = new RejectTaskSubmissionUseCase(claimRepo);
+
   const controller = new TaskController(
     createUseCase,
     updateUseCase,
@@ -119,6 +157,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const claimController = new TaskClaimController(claimUseCase, cancelClaimUseCase, claimRepo);
   const uploadController = new ProofUploadController(uploadUseCase);
   const submissionController = new TaskSubmissionController(submitUseCase, getClaimDetailsUseCase);
+  const adminSubmissionController = new AdminSubmissionController(
+    listSubmittedClaimsUseCase,
+    getSubmissionDetailsUseCase,
+    approveTaskSubmissionUseCase,
+    rejectTaskSubmissionUseCase
+  );
 
   // 4. Đăng ký các tuyến đường API
   registerTaskRoutes(app, controller);
@@ -126,6 +170,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerClaimRoutes(app, claimController);
   registerUploadRoutes(app, uploadController);
   registerSubmissionRoutes(app, submissionController);
+  registerAdminSubmissionRoutes(app, adminSubmissionController);
 
   // 5. Đăng ký tuyến đường Web phục vụ giao diện tĩnh (REQ-PUI-021)
   registerWebRoutes(app, options.publicDir);

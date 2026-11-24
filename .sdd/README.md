@@ -20,6 +20,7 @@
 | `post-job-ui` | Giao diện web quản trị nhiệm vụ Jobzz (Frontend UI) | Admin (@admin) | TASKS_APPROVED | `.sdd/features/post-job-ui/` |
 | `browse-and-claim-task` | Xem danh sách nhiệm vụ và Nhận việc cho Worker | Worker Team (@worker-team) | IMPLEMENTED | `.sdd/features/browse-and-claim-task/` |
 | `submit-task-proof` | Nộp bằng chứng nhiệm vụ (Submit Proof) cho Worker | Worker Team (@worker-team) | IMPLEMENTED | `.sdd/features/submit-task-proof/` |
+| `review-task-submission` | Xem và Duyệt bài nộp bằng chứng (Review Submissions) cho Admin | Admin (@admin) | IMPLEMENTED | `.sdd/features/review-task-submission/` |
 
 ## Cấu trúc feature
 

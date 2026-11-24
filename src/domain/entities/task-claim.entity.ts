@@ -1,5 +1,9 @@
 import { ClaimStatus, ClaimStatusType } from '../value-objects/claim-status.vo';
-import { ClaimAlreadyClosedError } from '../../shared/errors/claim-errors';
+import {
+  ClaimAlreadyClosedError,
+  ClaimAlreadyReviewedError,
+  ClaimNotInSubmittedStatusError,
+} from '../../shared/errors/claim-errors';
 import { SubmittedProofItem } from '../value-objects/submitted-proof.vo';
 
 export interface CreateTaskClaimProps {
@@ -20,6 +24,9 @@ export interface ReconstituteTaskClaimProps {
   submittedAt?: Date | null;
   submittedProofs?: SubmittedProofItem[] | any[] | null;
   completedAt?: Date | null;
+  reviewerId?: string | null;
+  reviewedAt?: Date | null;
+  rejectionReason?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +35,7 @@ export interface ReconstituteTaskClaimProps {
  * Thực thể quản lý lượt nhận việc giữ chỗ (Task Claim)
  * @ears .sdd/features/browse-and-claim-task/SPEC.md#5-mo-hinh-du-lieu-data-model--schema
  * @ears .sdd/features/submit-task-proof/SPEC.md#52-mo-rong-thuc-the-taskclaim--prisma-model
+ * @ears .sdd/features/review-task-submission/SPEC.md#52-mo-rong-thuc-the-taskclaim-domain-entity
  */
 export class TaskClaim {
   private _id: string;
@@ -39,6 +47,9 @@ export class TaskClaim {
   private _submittedAt: Date | null;
   private _submittedProofs: SubmittedProofItem[];
   private _completedAt: Date | null;
+  private _reviewerId: string | null;
+  private _reviewedAt: Date | null;
+  private _rejectionReason: string | null;
   private _createdAt: Date;
   private _updatedAt: Date;
 
@@ -52,6 +63,9 @@ export class TaskClaim {
     submittedAt?: Date | null;
     submittedProofs?: SubmittedProofItem[] | any[] | null;
     completedAt?: Date | null;
+    reviewerId?: string | null;
+    reviewedAt?: Date | null;
+    rejectionReason?: string | null;
     createdAt: Date;
     updatedAt: Date;
   }) {
@@ -74,6 +88,9 @@ export class TaskClaim {
         )
       : [];
     this._completedAt = props.completedAt || null;
+    this._reviewerId = props.reviewerId || null;
+    this._reviewedAt = props.reviewedAt || null;
+    this._rejectionReason = props.rejectionReason || null;
     this._createdAt = props.createdAt;
     this._updatedAt = props.updatedAt;
   }
@@ -93,6 +110,9 @@ export class TaskClaim {
       submittedAt: null,
       submittedProofs: [],
       completedAt: null,
+      reviewerId: null,
+      reviewedAt: null,
+      rejectionReason: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -109,6 +129,9 @@ export class TaskClaim {
       submittedAt: props.submittedAt || null,
       submittedProofs: props.submittedProofs || [],
       completedAt: props.completedAt || null,
+      reviewerId: props.reviewerId || null,
+      reviewedAt: props.reviewedAt || null,
+      rejectionReason: props.rejectionReason || null,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
     });
@@ -125,6 +148,9 @@ export class TaskClaim {
   public get submittedProofs(): SubmittedProofItem[] { return [...this._submittedProofs]; }
   public getSubmittedProofs(): SubmittedProofItem[] { return [...this._submittedProofs]; }
   public get completedAt(): Date | null { return this._completedAt; }
+  public get reviewerId(): string | null { return this._reviewerId; }
+  public get reviewedAt(): Date | null { return this._reviewedAt; }
+  public get rejectionReason(): string | null { return this._rejectionReason; }
   public get createdAt(): Date { return this._createdAt; }
   public get updatedAt(): Date { return this._updatedAt; }
 
@@ -213,19 +239,68 @@ export class TaskClaim {
 
   /**
    * Admin duyệt bài và chi trả thù lao Xu
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-007..011
    */
-  public approve(now: Date = new Date()): void {
+  public approve(reviewerIdOrNow?: string | Date, maybeNow?: Date): void {
+    let reviewerId = 'ADMIN';
+    let now = new Date();
+
+    if (typeof reviewerIdOrNow === 'string') {
+      reviewerId = reviewerIdOrNow;
+      now = maybeNow || new Date();
+    } else if (reviewerIdOrNow instanceof Date) {
+      now = reviewerIdOrNow;
+    }
+
+    if (this._status.isApproved() || this._status.getValue() === 'REJECTED') {
+      throw new ClaimAlreadyReviewedError();
+    }
+
+    if (!this._status.isSubmitted()) {
+      throw new ClaimNotInSubmittedStatusError();
+    }
+
     this._status = this._status.transitionTo('APPROVED');
+    this._reviewerId = reviewerId;
+    this._reviewedAt = now;
     this._completedAt = now;
     this._updatedAt = now;
   }
 
   /**
    * Admin từ chối bài nộp
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-012..016
    */
-  public reject(now: Date = new Date()): void {
+  public reject(reviewerIdOrNow?: string | Date, reasonOrNow?: string | Date, maybeNow?: Date): void {
+    let reviewerId = 'ADMIN';
+    let reason = '';
+    let now = new Date();
+
+    if (typeof reviewerIdOrNow === 'string') {
+      reviewerId = reviewerIdOrNow;
+      if (typeof reasonOrNow === 'string') {
+        reason = reasonOrNow;
+        now = maybeNow || new Date();
+      } else if (reasonOrNow instanceof Date) {
+        now = reasonOrNow;
+      }
+    } else if (reviewerIdOrNow instanceof Date) {
+      now = reviewerIdOrNow;
+    }
+
+    if (this._status.isApproved() || this._status.getValue() === 'REJECTED') {
+      throw new ClaimAlreadyReviewedError();
+    }
+
+    if (!this._status.isSubmitted()) {
+      throw new ClaimNotInSubmittedStatusError();
+    }
+
     this._status = this._status.transitionTo('REJECTED');
+    this._reviewerId = reviewerId;
+    this._reviewedAt = now;
     this._completedAt = now;
+    this._rejectionReason = reason || null;
     this._updatedAt = now;
   }
 
@@ -240,6 +315,9 @@ export class TaskClaim {
       submitted_at: this._submittedAt ? this._submittedAt.toISOString() : null,
       submitted_proofs: this._submittedProofs.map((p) => p.toJSON()),
       completed_at: this._completedAt ? this._completedAt.toISOString() : null,
+      reviewer_id: this._reviewerId,
+      reviewed_at: this._reviewedAt ? this._reviewedAt.toISOString() : null,
+      rejection_reason: this._rejectionReason,
       created_at: this._createdAt.toISOString(),
       updated_at: this._updatedAt.toISOString(),
     };

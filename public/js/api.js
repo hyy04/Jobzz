@@ -13,10 +13,11 @@ export class ApiClient {
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
     const role = getCurrentRole();
+    const hasBody = options.body !== undefined && options.body !== null;
     const headers = {
-      'Content-Type': 'application/json',
       'x-user-role': role,
       'x-user-id': role === 'ADMIN' ? 'adm-001' : 'worker-001',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
     };
 
@@ -34,7 +35,11 @@ export class ApiClient {
       const data = isJson ? await response.json() : await response.text();
 
       if (!response.ok) {
-        const error = new Error(data.message || `Lỗi HTTP ${response.status}`);
+        const errorMsg =
+          data?.error?.message ||
+          data?.message ||
+          (typeof data === 'string' && data ? data : `Lỗi HTTP ${response.status}`);
+        const error = new Error(errorMsg);
         error.status = response.status;
         error.data = data;
         throw error;
@@ -111,7 +116,10 @@ export class ApiClient {
    * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-009..014
    */
   static async claimTaskSlot(id) {
-    return this.request(`/api/v1/tasks/${id}/claim`, { method: 'POST' });
+    return this.request(`/api/v1/tasks/${id}/claim`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
   }
 
   /**
@@ -119,7 +127,10 @@ export class ApiClient {
    * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-015..016
    */
   static async cancelTaskClaim(id) {
-    return this.request(`/api/v1/tasks/${id}/claims/cancel`, { method: 'POST' });
+    return this.request(`/api/v1/tasks/${id}/claims/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
   }
 
   /**
@@ -161,5 +172,52 @@ export class ApiClient {
    */
   static async getClaimDetails(claimId) {
     return this.request(`/api/v1/claims/${claimId}`, { method: 'GET' });
+  }
+
+  /**
+   * Lấy danh sách bài nộp đang chờ duyệt cho Quản trị viên
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-001..003
+   */
+  static async getAdminSubmissions(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.task_id) query.set('task_id', params.task_id);
+
+    const queryString = query.toString();
+    const endpoint = queryString ? `/api/v1/admin/submissions?${queryString}` : '/api/v1/admin/submissions';
+    return this.request(endpoint, { method: 'GET' });
+  }
+
+  /**
+   * Xem chi tiết bài nộp và danh sách bằng chứng cho Admin
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-004..005
+   */
+  static async getAdminSubmissionDetails(claimId) {
+    return this.request(`/api/v1/admin/submissions/${claimId}`, { method: 'GET' });
+  }
+
+  /**
+   * Phê duyệt bài nộp và cộng Xu thưởng cho Worker
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-007..011
+   */
+  static async approveSubmission(claimId) {
+    return this.request(`/api/v1/admin/submissions/${claimId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
+  /**
+   * Từ chối bài nộp với lý do cụ thể và giải phóng slot
+   * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-012..016
+   */
+  static async rejectSubmission(claimId, rejectionReason) {
+    return this.request(`/api/v1/admin/submissions/${claimId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({
+        rejection_reason: rejectionReason,
+      }),
+    });
   }
 }

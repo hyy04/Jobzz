@@ -33,6 +33,9 @@
   <!-- Modal Container -->
   <div id="modal-container"></div>
 
+  <!-- Lightbox Modal Container (REQ-RTS-020) -->
+  <div id="lightbox-modal-container"></div>
+
   <!-- Navbar Header -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -52,6 +55,9 @@
           </button>
           <button id="nav-tab-admin" class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition bg-white text-brand-600 shadow-2xs">
             ⚙️ Quản Trị Task
+          </button>
+          <button id="nav-tab-submissions" class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition text-slate-600 hover:text-slate-900">
+            📝 Duyệt Bài Nộp
           </button>
         </nav>
       </div>
@@ -82,6 +88,11 @@
     <!-- Worker View (REQ-BCT-018) -->
     <div id="view-worker" class="hidden space-y-8">
       <div id="worker-marketplace-container"></div>
+    </div>
+
+    <!-- Admin Submissions View (REQ-RTS-019..023) -->
+    <div id="view-submissions" class="hidden space-y-8">
+      <div id="admin-submissions-container"></div>
     </div>
 
     <!-- Admin View (REQ-PUI-001) -->

@@ -3,10 +3,12 @@ import { initTaskForm } from './components/task-form.js';
 import { initTaskTable, updateTaskTable } from './components/task-table.js';
 import { renderDashboardStats } from './components/dashboard-stats.js';
 import { WorkerMarketplace } from './components/worker-marketplace.js';
+import { AdminSubmissionsTab } from './components/admin-submissions-tab.js';
 import { ApiClient } from './api.js';
 import { showToast } from './components/toast-modal.js';
 
 let marketplace = null;
+let submissionsTab = null;
 let currentTab = 'admin';
 
 /**
@@ -34,39 +36,48 @@ async function loadAdminData() {
 }
 
 /**
- * Chuyển đổi giữa Tab Người làm (Worker) và Tab Quản trị (Admin)
+ * Chuyển đổi giữa Tab Người làm (Worker), Quản trị Task (Admin) và Duyệt bài nộp (Submissions)
  * @ears .sdd/features/browse-and-claim-task/SPEC.md#REQ-BCT-018
+ * @ears .sdd/features/review-task-submission/SPEC.md#REQ-RTS-019
  */
 export function switchTab(tab) {
   currentTab = tab;
   const workerView = document.getElementById('view-worker');
   const adminView = document.getElementById('view-admin');
+  const submissionsView = document.getElementById('view-submissions');
+
   const tabWorkerBtn = document.getElementById('nav-tab-worker');
   const tabAdminBtn = document.getElementById('nav-tab-admin');
+  const tabSubmissionsBtn = document.getElementById('nav-tab-submissions');
+
+  // Reset classes cho các nút tab
+  [tabWorkerBtn, tabAdminBtn, tabSubmissionsBtn].forEach((btn) => {
+    btn?.classList.remove('bg-white', 'text-brand-600', 'shadow-2xs');
+    btn?.classList.add('text-slate-600');
+  });
+
+  // Ẩn toàn bộ views
+  workerView?.classList.add('hidden');
+  adminView?.classList.add('hidden');
+  submissionsView?.classList.add('hidden');
 
   if (tab === 'worker') {
     window.location.hash = '#worker';
     workerView?.classList.remove('hidden');
-    adminView?.classList.add('hidden');
-
     tabWorkerBtn?.classList.add('bg-white', 'text-brand-600', 'shadow-2xs');
     tabWorkerBtn?.classList.remove('text-slate-600');
-
-    tabAdminBtn?.classList.remove('bg-white', 'text-brand-600', 'shadow-2xs');
-    tabAdminBtn?.classList.add('text-slate-600');
-
     if (marketplace) marketplace.loadTasks();
+  } else if (tab === 'submissions') {
+    window.location.hash = '#submissions';
+    submissionsView?.classList.remove('hidden');
+    tabSubmissionsBtn?.classList.add('bg-white', 'text-brand-600', 'shadow-2xs');
+    tabSubmissionsBtn?.classList.remove('text-slate-600');
+    if (submissionsTab) submissionsTab.loadSubmissions();
   } else {
     window.location.hash = '#admin';
-    workerView?.classList.add('hidden');
     adminView?.classList.remove('hidden');
-
     tabAdminBtn?.classList.add('bg-white', 'text-brand-600', 'shadow-2xs');
     tabAdminBtn?.classList.remove('text-slate-600');
-
-    tabWorkerBtn?.classList.remove('bg-white', 'text-brand-600', 'shadow-2xs');
-    tabWorkerBtn?.classList.add('text-slate-600');
-
     loadAdminData();
   }
 }
@@ -80,13 +91,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   marketplace = new WorkerMarketplace('worker-marketplace-container');
   marketplace.init();
 
-  // 3. Tab navigation listeners
+  // 3. Khởi tạo Admin Submissions Tab
+  submissionsTab = new AdminSubmissionsTab('admin-submissions-container');
+  submissionsTab.init();
+
+  // 4. Tab navigation listeners
   document.getElementById('nav-tab-worker')?.addEventListener('click', () => switchTab('worker'));
   document.getElementById('nav-tab-admin')?.addEventListener('click', () => switchTab('admin'));
+  document.getElementById('nav-tab-submissions')?.addEventListener('click', () => switchTab('submissions'));
 
   window.addEventListener('hashchange', () => {
     const hash = window.location.hash;
     if (hash === '#worker') switchTab('worker');
+    else if (hash === '#submissions') switchTab('submissions');
     else if (hash === '#admin') switchTab('admin');
   });
 
@@ -95,39 +112,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (role === 'WORKER') {
       switchTab('worker');
     } else if (role === 'ADMIN') {
-      switchTab('admin');
+      if (currentTab === 'worker') switchTab('admin');
+      else if (currentTab === 'submissions') submissionsTab.loadSubmissions();
+      else loadAdminData();
     } else {
       if (currentTab === 'worker') marketplace.loadTasks();
+      else if (currentTab === 'submissions') submissionsTab.loadSubmissions();
       else loadAdminData();
     }
   });
 
-  // 4. Khởi tạo Task Table cho Admin
+  // 5. Khởi tạo Task Table cho Admin
   initTaskTable(async () => {
     await loadAdminData();
   });
 
-  // 5. Khởi tạo Task Form cho Admin
+  // 6. Khởi tạo Task Form cho Admin
   initTaskForm(async (_createdTask) => {
     await loadAdminData();
     document.getElementById('task-search-input')?.scrollIntoView({ behavior: 'smooth' });
   });
 
-  // 6. Nút làm mới toàn trang
+  // 7. Nút làm mới toàn trang
   document.getElementById('btn-refresh-all')?.addEventListener('click', async () => {
     showToast('Đang làm mới dữ liệu...', 'info', 1500);
     if (currentTab === 'worker') {
       await marketplace.loadTasks();
+    } else if (currentTab === 'submissions') {
+      await submissionsTab.loadSubmissions();
     } else {
       await loadAdminData();
     }
   });
 
-  // 7. Xác định tab ban đầu theo URL hash hoặc vai trò
+  // 8. Xác định tab ban đầu theo URL hash hoặc vai trò
   const initialHash = window.location.hash;
   const initialRole = getCurrentRole();
   if (initialHash === '#worker' || initialRole === 'WORKER') {
     switchTab('worker');
+  } else if (initialHash === '#submissions') {
+    switchTab('submissions');
   } else {
     switchTab('admin');
   }
